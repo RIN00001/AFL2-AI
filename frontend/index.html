@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101718">
+  <meta name="description" content="A game of position and possibility. Challenge a Python-powered AI on a nine-point circular board.">
+  <title>ORBIT — A game of position</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%23101718' stroke='%23d4b77a' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23d4b77a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Orbit home"><span class="brand-mark">◎</span> ORBIT<span class="brand-divider"></span><span class="brand-caption">AI STRATEGY LAB</span></a>
+    <button id="help" class="text-button"><span class="help-icon">?</span> How to play</button>
+  </header>
+  <main>
+    <section class="intro">
+      <div><div class="eyebrow"><span></span> THREE PIECES. ONE PERFECT LINE.</div><h1>A game of <em>position.</em></h1><p>Find your opening. Hold the center. Think one move ahead.</p></div>
+      <div class="edition">HUMAN <span>×</span> MACHINE<small>01 / THE CIRCULAR ARENA</small></div>
+    </section>
+    <div class="mobile-hud"><span id="mobile-turn">READY TO PLAY</span><span id="mobile-clock">01:00</span></div>
+    <div class="game-layout">
+      <section class="arena" aria-label="Game arena">
+        <div class="arena-top"><span class="section-label">THE BOARD</span><span id="round-label">READY WHEN YOU ARE</span></div>
+        <div class="board-wrap">
+          <div class="board-halo"></div>
+          <svg class="board-lines" viewBox="0 0 600 600" aria-hidden="true">
+            <defs><radialGradient id="board-fill"><stop stop-color="#263331"/><stop offset="1" stop-color="#192423"/></radialGradient></defs>
+            <circle cx="300" cy="300" r="272" fill="url(#board-fill)" stroke="#79705a" stroke-width="1"/>
+            <circle cx="300" cy="300" r="259" fill="none" stroke="#4a4f42" stroke-width="1"/>
+            <circle cx="300" cy="300" r="213" fill="none" stroke="#8d805b" stroke-width="2"/>
+            <g stroke="#8d805b" stroke-width="2" opacity=".75">
+              <path d="M300 87V513M87 300H513M149.4 149.4L450.6 450.6M450.6 149.4L149.4 450.6"/>
+            </g>
+            <circle cx="300" cy="300" r="67" fill="none" stroke="#756e51" stroke-width="1"/>
+            <circle cx="300" cy="300" r="74" fill="none" stroke="#756e51" stroke-dasharray="1 9" stroke-width="5"/>
+            <g id="win-line"></g>
+          </svg>
+          <div id="board" role="group" aria-label="Nine-position game board"></div>
+          <div class="board-compass north">N</div><div class="board-compass south">S</div>
+          <div id="result" class="result-card" hidden aria-live="polite">
+            <div id="result-symbol">✦</div><span class="eyebrow">MATCH COMPLETE</span>
+            <h2 id="result-title"></h2><p id="result-description"></p>
+            <button id="play-again" class="primary">Play again <span>↗</span></button>
+            <button id="view-board" class="text-button">View final board</button>
+          </div>
+        </div>
+        <div class="arena-bottom"><div class="legend"><span class="legend-dot human"></span> YOU <span class="legend-dot ai"></span> ORBIT AI</div><span>9 positions <i>·</i> 4 winning lines</span></div>
+      </section>
+      <aside class="sidebar">
+        <section class="match-card">
+          <div class="card-heading"><span class="section-label">YOUR MATCH</span><span class="live-dot"></span></div>
+          <div class="turn-info"><span id="turn-icon">◎</span><div><h2 id="turn-title">Take your position.</h2><p id="turn-description">A little strategy goes a long way.</p></div></div>
+          <div class="clock-block"><div><span class="section-label">YOUR THINKING TIME</span><span id="clock-state">60 SECONDS TOTAL</span></div><div id="clock" class="clock">01<span>:</span>00<small>.0</small></div><div class="clock-track"><div id="clock-progress"></div></div><p>Time runs only on your turn.</p></div>
+          <div class="settings">
+            <div class="setting-label"><label for="depth">AI search depth</label><span id="depth-name">Balanced</span></div>
+            <select id="depth"><option value="3">03 — A gentle start</option><option value="5" selected>05 — Think ahead</option><option value="7">07 — A deeper challenge</option></select>
+            <label class="toggle-row" for="pruning"><span>Alpha-Beta pruning<small>A faster path to the same decision</small></span><input type="checkbox" id="pruning" checked><span class="switch"></span></label>
+          </div>
+          <button id="start" class="primary">Start a match <span>↗</span></button>
+          <p id="start-note" class="small-note">Random board. Coin flip for the first move.</p>
+          <p id="error" class="error" role="alert" hidden></p>
+        </section>
+        <section class="insight-card">
+          <button id="insight-toggle" class="insight-heading" aria-expanded="true" aria-controls="insight-body"><span><span class="spark">✧</span> Inside the AI</span><span id="insight-chevron">−</span></button>
+          <div id="insight-body"><p>Python explores the possibilities.<br>You choose what happens next.</p>
+            <div class="stats"><div><strong id="stat-nodes">—</strong><span>STATES VISITED</span></div><div><strong id="stat-time">—</strong><span>SEARCH TIME</span></div></div>
+            <div class="insight-footer"><span id="stat-algorithm">MINIMAX + ALPHA-BETA</span><span id="stat-depth">DEPTH 5</span></div>
+            <p id="search-note" class="search-note">Search details appear after the AI's first move.</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+    <section class="under-board"><div><span class="step-number">01</span><p><strong>Choose a piece</strong><span>Your ivory pieces are yours to move.</span></p></div><div><span class="step-number">02</span><p><strong>Follow a connection</strong><span>Move to a neighboring empty point.</span></p></div><div><span class="step-number">03</span><p><strong>Make your line</strong><span>Three pieces, straight through the center.</span></p></div></section>
+    <section class="history-section"><div class="history-heading"><span class="section-label">MOVE JOURNAL</span><span id="move-count">NO MOVES YET</span></div><div id="history"><span class="history-empty">Every good game starts with a possibility.</span></div></section>
+  </main>
+  <footer><span>ORBIT <span class="footer-muted">/ An experiment in thinking ahead.</span></span><span>POWERED BY PYTHON · BUILT FOR CURIOSITY</span></footer>
+  <dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close instructions">×</button><div class="eyebrow">A MINUTE TO LEARN</div><h2>Find your alignment.</h2><p>You and ORBIT AI each control three pieces. Be the first to make a straight line through the center.</p><ol><li><strong>Move one piece each turn.</strong> Follow a ring connection or a spoke to an empty neighboring point. No jumping or capturing.</li><li><strong>Only four lines win.</strong> Any two opposite outer points plus the center. Three pieces around the edge do not count.</li><li><strong>Make your minute count.</strong> You have 60 seconds across all your turns. Your clock pauses during AI turns; zero means an AI win.</li><li><strong>A fresh puzzle every time.</strong> The opening board has no existing or one-move wins for either side. A coin flip chooses who starts.</li></ol><p class="dialog-note">No legal moves means a draw. Repeated positions are allowed. Search settings can be changed between matches; larger depths are capped by a computation budget to keep the game responsive.</p><button id="got-it" class="primary">Got it. Let's play. <span>↗</span></button></dialog>
+  <dialog id="restart-dialog"><div class="eyebrow">START FRESH</div><h2>A new possibility?</h2><p>This ends your current match and deals a new board. Your clock keeps running until you restart.</p><div class="dialog-actions"><button id="cancel-restart" class="secondary">Keep playing</button><button id="confirm-restart" class="primary">New match ↗</button></div></dialog>
+</body>
+</html>
