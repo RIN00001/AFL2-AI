@@ -6,19 +6,75 @@ HTML, CSS, JavaScript, and SVG. No build step, framework, or database is needed.
 
 ## Run
 
-Install Python **3.10 or newer**, then from this folder:
+Install Python **3.10 or newer**, clone this repository, and open a terminal
+in the cloned folder. Its name and location do not matter.
+
+### One-time setup
+
+Create and activate a virtual environment.
+
+**Windows PowerShell:**
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+**macOS / Linux:**
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Then run this same installation command on either OS:
+
+```sh
+python -m pip install -e .
+```
+
+This registers the `orbit` command and links it to your clone. Code changes
+from `git pull` are picked up when you restart the server; reinstall if
+the packaging configuration changes. There are no third-party runtime
+dependencies; pip may download the build tool during setup.
+
+### Start the game
+
+With the virtual environment active, everyone uses:
+
+```sh
+orbit
+```
+
+Open **http://127.0.0.1:8000**. Keep the terminal running while playing.
+Press Ctrl+C to stop. In a new terminal, activate the environment again
+using the activation command above, then run `orbit`.
+
+If PowerShell blocks activation, you can run the installed command directly
+from the clone without changing your PowerShell settings:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\orbit.exe
+```
+
+To choose another port:
+
+```sh
+orbit --port 8001
+```
+
+The original no-install launch method also remains available from the
+repository root (use `py` on Windows or `python3` on macOS/Linux if needed):
 
 ```sh
 python run.py
 ```
 
-Open **http://127.0.0.1:8000**. Keep the terminal running while playing.
-Stop with Ctrl+C. No packages need to be installed.
-
 For other computers on a trusted college network:
 
 ```sh
-python run.py --host 0.0.0.0 --port 8000
+orbit --host 0.0.0.0 --port 8000
 ```
 
 On those computers, open `http://<server-computer-LAN-IP>:8000`.

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbit-ai-rally"
+version = "0.1.0"
+description = "A browser strategy game with a Python Minimax opponent."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+orbit = "backend.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backend", "backend.*", "frontend"]
+exclude = ["backend.tests", "backend.tests.*"]
+
+[tool.setuptools.package-data]
+frontend = ["index.html", "css/*.css", "js/*.js"]
