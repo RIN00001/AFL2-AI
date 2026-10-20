@@ -3,7 +3,6 @@ import argparse
 import json
 import secrets
 from dataclasses import dataclass, field
-from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from random import choice
@@ -11,8 +10,10 @@ from threading import Lock
 from time import monotonic
 from urllib.parse import urlsplit
 
-from backend.ai import choose_move
-from backend.game import AI, HUMAN, legal_moves, moved, new_board, winning_line
+from backend.ai.minimax import choose_move
+from backend.ai.difficulty import DEFAULT_DEPTH, DEFAULT_PRUNING, SEARCH_DEPTHS
+from backend.game.board import AI, HUMAN, moved
+from backend.game.rules import legal_moves, new_board, winning_line
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 MATCHES = {}
@@ -32,8 +33,8 @@ class Match:
     ply: int = 0
     history: list = field(default_factory=list)
     stats: dict | None = None
-    depth: int = 5
-    pruning: bool = True
+    depth: int = DEFAULT_DEPTH
+    pruning: bool = DEFAULT_PRUNING
     touched: float = field(default_factory=monotonic)
     lock: Lock = field(default_factory=Lock)
 
@@ -128,9 +129,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self.reply(400, {"error": "Invalid request."})
         path = urlsplit(self.path).path
         if path == "/api/new":
-            depth = data.get("depth", 5)
-            pruning = data.get("pruning", True)
-            if type(depth) is not int or depth not in (3, 5, 7) or type(pruning) is not bool:
+            depth = data.get("depth", DEFAULT_DEPTH)
+            pruning = data.get("pruning", DEFAULT_PRUNING)
+            if type(depth) is not int or depth not in SEARCH_DEPTHS or type(pruning) is not bool:
                 return self.reply(400, {"error": "Invalid AI settings."})
             match = Match(depth=depth, pruning=pruning)
             sid = secrets.token_urlsafe(24)

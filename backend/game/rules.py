@@ -1,23 +1,12 @@
-"""Pure game rules. Nodes 0..7 go clockwise from the top; 8 is the center."""
+"""Legal moves, victories, and validated randomized openings."""
 from itertools import combinations
 from random import choice
-
-EMPTY, HUMAN, AI = 0, 1, 2
-ADJACENCY = {i: ((i - 1) % 8, (i + 1) % 8, 8) for i in range(8)}
-ADJACENCY[8] = tuple(range(8))
-WINNING_LINES = ((0, 8, 4), (6, 8, 2), (7, 8, 3), (1, 8, 5))
+from backend.game.board import EMPTY, HUMAN, AI, ADJACENCY, WINNING_LINES, moved
 
 
 def legal_moves(board, player):
     return [(source, target) for source in range(9) if board[source] == player
             for target in ADJACENCY[source] if board[target] == EMPTY]
-
-
-def moved(board, move):
-    result = list(board)
-    source, target = move
-    result[target], result[source] = result[source], EMPTY
-    return tuple(result)
 
 
 def winning_line(board, player):

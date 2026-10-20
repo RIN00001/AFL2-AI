@@ -49,7 +49,7 @@ after one hour; the in-memory session pool is capped at 1,000.
 
 ## Algorithms and assessment
 
-`backend/ai.py` implements Minimax and optional Alpha-Beta pruning in Python.
+`backend/ai/minimax.py` implements Minimax and optional Alpha-Beta pruning in Python.
 Both use the same move ordering, terminal scores, and evaluation function.
 Depths 3, 5, and 7 search individual moves (plies), not full rounds.
 
@@ -71,16 +71,53 @@ proof that every opening has equal game-theoretic value.
 
 ## Code map
 
+The layout follows section 9.2 of the GDD. Python package markers
+(`__init__.py`), the HTTP integration tests, and the existing convenience
+launcher `run.py` are additional support files.
+
+```text
+backend/
+  main.py
+  game/
+    board.py
+    rules.py
+  ai/
+    minimax.py
+    evaluation.py
+    difficulty.py
+  tests/
+    test_rules.py
+    test_ai.py
+    test_api.py
+frontend/
+  index.html
+  css/
+    style.css
+  js/
+    game.js
+    renderer.js
+    api.js
+requirements.txt
+README.md
+run.py
+```
+
 | File | Responsibility |
 | --- | --- |
-| `backend/game.py` | Graph, moves, winning lines, valid opening pool |
-| `backend/ai.py` | Minimax, Alpha-Beta, evaluation, search budget |
-| `backend/server.py` | API, isolated matches, authoritative clock |
+| `backend/game/board.py` | Board constants, graph, winning triples, immutable movement |
+| `backend/game/rules.py` | Legal moves, winning checks, valid opening pool |
+| `backend/ai/minimax.py` | Minimax, Alpha-Beta, iterative deepening |
+| `backend/ai/evaluation.py` | Positional evaluation |
+| `backend/ai/difficulty.py` | Allowed depths, defaults, computation budget |
+| `backend/main.py` | API, isolated matches, authoritative clock |
 | `frontend/index.html` | Game interface and instructions |
-| `frontend/style.css` | Responsive visual design |
-| `frontend/app.js` | Rendering, inputs, API calls, clock display |
-| `tests/test_game.py` | Rule, AI, and clock verification |
-| `tests/test_api.py` | HTTP, session isolation, and rejected-request checks |
+| `frontend/css/style.css` | Responsive visual design |
+| `frontend/js/game.js` | Match state, input handling, turn flow |
+| `frontend/js/renderer.js` | Board, clock, history, and result rendering |
+| `frontend/js/api.js` | Python API requests and response errors |
+| `backend/tests/test_rules.py` | Rule and clock verification |
+| `backend/tests/test_ai.py` | AI decisions, pruning, and search budget checks |
+| `backend/tests/test_api.py` | HTTP, assets, session isolation, and rejected-request checks |
 
 Internal node IDs are 0–7 clockwise from the top, with center 8.
 The UI labels outer nodes 01–08 and uses a star for the center.
@@ -89,8 +126,11 @@ Winning triples: `(0,8,4)`, `(6,8,2)`, `(7,8,3)`, `(1,8,5)`.
 ## Verification
 
 ```sh
-python -m unittest discover -s tests -v
+python -m unittest discover -s backend/tests -v
 ```
+
+The existing `python run.py` command still works. Alternatively, run
+`python -m backend.main` from the project root.
 
 API routes: `POST /api/new`, `POST /api/move`, `POST /api/ai`,
 `GET /api/state`. Mutations include the current `ply` to reject stale requests.

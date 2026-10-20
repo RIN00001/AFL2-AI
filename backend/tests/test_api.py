@@ -7,8 +7,8 @@ import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 
-from backend.server import Handler, MATCHES, MATCHES_LOCK
-from backend.game import valid_start
+from backend.main import Handler, MATCHES, MATCHES_LOCK
+from backend.game.rules import valid_start
 
 
 class QuietHandler(Handler):
@@ -105,7 +105,17 @@ class APITests(unittest.TestCase):
     def test_frontend_is_served(self):
         with self.client.open(self.url + "/") as response:
             self.assertEqual(response.status, 200)
-            self.assertIn(b"ORBIT", response.read())
+            html = response.read()
+            self.assertIn(b"ORBIT", html)
+            self.assertIn(b'href="/css/style.css"', html)
+            self.assertIn(b'type="module" src="/js/game.js"', html)
+        for path in ("/css/style.css", "/js/game.js", "/js/renderer.js", "/js/api.js"):
+            with self.subTest(path=path), self.client.open(self.url + path) as response:
+                self.assertEqual(response.status, 200)
+                self.assertTrue(response.read())
+                if path.endswith(".js"):
+                    self.assertIn(response.headers.get_content_type(),
+                                  ("text/javascript", "application/javascript"))
 
 
 if __name__ == "__main__":

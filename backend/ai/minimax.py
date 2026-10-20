@@ -1,22 +1,12 @@
-"""Depth-limited Minimax, optionally accelerated by Alpha-Beta pruning."""
+"""Depth-limited Minimax with optional Alpha-Beta pruning."""
 from time import monotonic
-from backend.game import AI, HUMAN, WINNING_LINES, legal_moves, moved, winning_line
+from backend.game.board import AI, HUMAN, moved
+from backend.game.rules import legal_moves, winning_line
+from backend.ai.evaluation import evaluate
+from backend.ai.difficulty import DEFAULT_DEPTH, DEFAULT_PRUNING, SEARCH_TIME_LIMIT
 
 
-def evaluate(board):
-    score = 8 * ((board[8] == AI) - (board[8] == HUMAN))
-    score += len(legal_moves(board, AI)) - len(legal_moves(board, HUMAN))
-    for line in WINNING_LINES:
-        a = sum(board[i] == AI for i in line)
-        h = sum(board[i] == HUMAN for i in line)
-        if not h:
-            score += (0, 2, 18, 0)[a]
-        if not a:
-            score -= (0, 2, 18, 0)[h]
-    return score
-
-
-def choose_move(board, depth=5, pruning=True, time_limit=0.7):
+def choose_move(board, depth=DEFAULT_DEPTH, pruning=DEFAULT_PRUNING, time_limit=SEARCH_TIME_LIMIT):
     started = monotonic()
     deadline = started + time_limit
     stats = {"nodes": 0, "pruned": 0, "depth": 0, "target_depth": depth,
