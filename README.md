@@ -97,7 +97,7 @@ behind HTTPS for internet use.
 - No available moves is a draw. Repetition does not end a match.
 - Restart, instructions, legal-move highlights, result display, move history,
   and AI search statistics are included.
-- The search target is fixed at seven ply. Pruning can be toggled between
+- The search target is fixed at four ply. Pruning can be toggled between
   matches for algorithm comparison. Reloading reconnects to the existing
   match; it does not reset the clock.
 - Sound starts enabled after the first interaction; use the header mute
@@ -115,7 +115,7 @@ after one hour; the in-memory session pool is capped at 1,000.
 
 `backend/ai/minimax.py` implements Minimax and optional Alpha-Beta pruning in Python.
 Both use the same move ordering, terminal scores, and evaluation function.
-The fixed target of seven ply searches individual moves, not full rounds.
+The fixed target of four ply searches individual moves, not full rounds.
 
 The search uses iterative deepening and a 5-second computation budget.
 Only fully completed depths replace the chosen decision. At the same completed

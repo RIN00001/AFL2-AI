@@ -62,7 +62,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(reloaded["turn"], first["turn"])
 
     def test_move_validation_stale_requests_and_ai_reply(self):
-        _, state = self.request("/api/new", {"depth": 7, "pruning": True})
+        _, state = self.request("/api/new", {"depth": 4, "pruning": True})
         if state["turn"] == 2:
             _, state = self.request("/api/ai", {"ply": state["ply"]})
         before = state["ply"]
@@ -79,6 +79,7 @@ class APITests(unittest.TestCase):
             self.assertEqual(code, 200)
             self.assertEqual(state["ply"], before + 2)
             self.assertIsNotNone(state["stats"])
+            self.assertEqual(state["stats"]["target_depth"], 4)
 
     def test_timeout_cannot_be_bypassed_by_move_request(self):
         _, state = self.request("/api/new", {})
@@ -126,7 +127,7 @@ class APITests(unittest.TestCase):
         for pruning in (False, True):
             code, state = self.request('/api/new', {'pruning': pruning})
             self.assertEqual(code, 200)
-            self.assertEqual(state['depth'], 7)
+            self.assertEqual(state['depth'], 4)
             self.assertEqual(state['pruning'], pruning)
             self.assertEqual(state['board'], list(FIXED_OPENING))
             self.assertEqual(state['turn'], 1)
