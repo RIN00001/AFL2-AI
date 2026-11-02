@@ -9,6 +9,8 @@ from http.server import ThreadingHTTPServer
 
 from backend.main import Handler, MATCHES, MATCHES_LOCK
 from backend.game.rules import valid_start
+from backend.game.rules import FIXED_OPENING
+from backend.game.settings import THINKING_TIME
 
 
 class QuietHandler(Handler):
@@ -60,7 +62,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(reloaded["turn"], first["turn"])
 
     def test_move_validation_stale_requests_and_ai_reply(self):
-        _, state = self.request("/api/new", {"depth": 3, "pruning": True})
+        _, state = self.request("/api/new", {"depth": 7, "pruning": True})
         if state["turn"] == 2:
             _, state = self.request("/api/ai", {"ply": state["ply"]})
         before = state["ply"]
@@ -106,16 +108,43 @@ class APITests(unittest.TestCase):
         with self.client.open(self.url + "/") as response:
             self.assertEqual(response.status, 200)
             html = response.read()
-            self.assertIn(b"ORBIT", html)
+            self.assertIn(b"Lifer's Strategy Arena", html)
             self.assertIn(b'href="/css/style.css"', html)
             self.assertIn(b'type="module" src="/js/game.js"', html)
-        for path in ("/css/style.css", "/js/game.js", "/js/renderer.js", "/js/api.js"):
+        for path in ("/css/style.css", "/js/game.js", "/js/renderer.js", "/js/api.js", "/js/audio.js"):
             with self.subTest(path=path), self.client.open(self.url + path) as response:
                 self.assertEqual(response.status, 200)
                 self.assertTrue(response.read())
                 if path.endswith(".js"):
                     self.assertIn(response.headers.get_content_type(),
                                   ("text/javascript", "application/javascript"))
+
+    def test_fixed_settings_restart_and_idle_preview(self):
+        _, preview = self.request('/api/state')
+        self.assertEqual(preview['board'], list(FIXED_OPENING))
+        self.assertEqual(preview['time_limit'], THINKING_TIME)
+        for pruning in (False, True):
+            code, state = self.request('/api/new', {'pruning': pruning})
+            self.assertEqual(code, 200)
+            self.assertEqual(state['depth'], 7)
+            self.assertEqual(state['pruning'], pruning)
+            self.assertEqual(state['board'], list(FIXED_OPENING))
+            self.assertEqual(state['turn'], 1)
+            self.assertGreater(state['remaining'], THINKING_TIME - 1)
+        self.assertEqual(self.request('/api/new', {'depth': 3})[0], 400)
+
+    def test_ai_transition_has_bounded_grace_and_rejects_early_moves(self):
+        _, state = self.request('/api/new', {})
+        source, target = state['legal_moves'][0]
+        _, state = self.request('/api/move', {'from': source, 'to': target, 'ply': state['ply']})
+        saved_time = state['remaining']
+        _, state = self.request('/api/ai', {'ply': state['ply']})
+        self.assertEqual(state['remaining'], saved_time)
+        self.assertGreater(state['clock_starts_in'], 0)
+        self.assertLessEqual(state['clock_starts_in'], state['animation_seconds'])
+        source, target = state['legal_moves'][0]
+        code, _ = self.request('/api/move', {'from': source, 'to': target, 'ply': state['ply']})
+        self.assertEqual(code, 409)
 
 
 if __name__ == "__main__":

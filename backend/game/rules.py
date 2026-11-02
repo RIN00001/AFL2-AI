@@ -1,6 +1,5 @@
-"""Legal moves, victories, and validated randomized openings."""
+"""Legal moves, victories, and the verified fixed competition opening."""
 from itertools import combinations
-from random import choice
 from backend.game.board import EMPTY, HUMAN, AI, ADJACENCY, WINNING_LINES, moved
 
 
@@ -41,8 +40,12 @@ def starting_boards():
 
 STARTING_BOARDS = starting_boards()
 
+# IDs 0-7 run clockwise from north; 8 is the center.
+# Equal mobility, color/half-turn symmetry, no immediate wins, and a draw
+# under untimed perfect play for either first player. Reproduce the analysis
+# with: python -m backend.game.opening_analysis
+FIXED_OPENING = (HUMAN, AI, HUMAN, EMPTY, AI, HUMAN, AI, EMPTY, EMPTY)
+
 
 def new_board():
-    # The entire pool is symmetric under exchanging players. This avoids a
-    # color bias; it does not claim every position is game-theoretically equal.
-    return choice(STARTING_BOARDS)
+    return FIXED_OPENING

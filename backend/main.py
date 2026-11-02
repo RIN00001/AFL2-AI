@@ -5,15 +5,15 @@ import secrets
 from dataclasses import dataclass, field
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from random import choice
 from threading import Lock
-from time import monotonic
+from time import monotonic, sleep
 from urllib.parse import urlsplit
 
 from backend.ai.minimax import choose_move
 from backend.ai.difficulty import DEFAULT_DEPTH, DEFAULT_PRUNING, SEARCH_DEPTHS
 from backend.game.board import AI, HUMAN, moved
 from backend.game.rules import legal_moves, new_board, winning_line
+from backend.game.settings import GAME_NAME, THINKING_TIME, AI_MIN_THINK_SECONDS, MOVE_ANIMATION_SECONDS
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 MATCHES = {}
@@ -24,8 +24,8 @@ SESSION_TTL = 3600
 @dataclass
 class Match:
     board: tuple = field(default_factory=new_board)
-    turn: int = field(default_factory=lambda: choice((HUMAN, AI)))
-    remaining: float = 60.0
+    turn: int = HUMAN
+    remaining: float = THINKING_TIME
     started: float | None = None
     status: str = "playing"
     reason: str | None = None
@@ -46,12 +46,12 @@ class Match:
         now = monotonic()
         self.touched = now
         if self.status == "playing" and self.turn == HUMAN and self.started is not None:
-            self.remaining = max(0, self.remaining - (now - self.started))
-            self.started = now
+            self.remaining = max(0, self.remaining - max(0, now - self.started))
+            self.started = max(now, self.started)
             if self.remaining == 0:
                 self.status, self.reason, self.started = "ai_win", "timeout", None
 
-    def apply(self, move):
+    def apply(self, move, *, presentation_delay=0.0):
         player = self.turn
         self.board = moved(self.board, move)
         self.ply += 1
@@ -67,7 +67,7 @@ class Match:
             if not legal_moves(self.board, self.turn):
                 self.status, self.reason = "draw", "no_moves"
             elif self.turn == HUMAN:
-                self.started = monotonic()
+                self.started = monotonic() + presentation_delay
 
     def snapshot(self):
         self.tick()
@@ -75,7 +75,10 @@ class Match:
                 "status": self.status, "reason": self.reason, "winning_line": self.line,
                 "legal_moves": legal_moves(self.board, self.turn) if self.status == "playing" else [],
                 "ply": self.ply, "history": self.history[-30:], "stats": self.stats,
-                "depth": self.depth, "pruning": self.pruning}
+                "depth": self.depth, "pruning": self.pruning,
+                "time_limit": THINKING_TIME,
+                "clock_starts_in": max(0, self.started - monotonic()) if self.started is not None else 0,
+                "animation_seconds": MOVE_ANIMATION_SECONDS}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -106,7 +109,11 @@ class Handler(SimpleHTTPRequestHandler):
             with MATCHES_LOCK:
                 match = MATCHES.get(self.session_id())
             if not match:
-                return self.reply(200, {"status": "idle"})
+                return self.reply(200, {"status": "idle", "board": new_board(),
+                                       "remaining": THINKING_TIME, "time_limit": THINKING_TIME,
+                                       "depth": DEFAULT_DEPTH, "pruning": DEFAULT_PRUNING,
+                                       "history": [], "clock_starts_in": 0,
+                                       "animation_seconds": MOVE_ANIMATION_SECONDS})
             with match.lock:
                 return self.reply(200, match.snapshot())
         if path.startswith("/api/"):
@@ -159,6 +166,8 @@ class Handler(SimpleHTTPRequestHandler):
             if data.get("ply") != match.ply:
                 return self.reply(409, {"error": "The board changed. Please try again."})
             if path == "/api/move":
+                if match.started is not None and match.started > monotonic():
+                    return self.reply(409, {"error": "Please wait for the move animation to finish."})
                 move = (data.get("from"), data.get("to"))
                 if (match.turn != HUMAN or any(type(i) is not int for i in move)
                         or move not in legal_moves(match.board, HUMAN)):
@@ -167,11 +176,14 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 if match.turn != AI:
                     return self.reply(409, {"error": "It is your turn."})
+                thinking_started = monotonic()
                 move, match.stats = choose_move(match.board, match.depth, match.pruning)
+                # Presentation delay is separate from the measured algorithm time.
+                sleep(max(0, AI_MIN_THINK_SECONDS - (monotonic() - thinking_started)))
                 if move is None:
                     match.status, match.reason = "draw", "no_moves"
                 else:
-                    match.apply(move)
+                    match.apply(move, presentation_delay=MOVE_ANIMATION_SECONDS)
             return self.reply(200, match.snapshot())
 
 
@@ -181,7 +193,7 @@ def main():
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"ORBIT is ready at http://{args.host}:{args.port}", flush=True)
+    print(f"{GAME_NAME} is ready at http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
