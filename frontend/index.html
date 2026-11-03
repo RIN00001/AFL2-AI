@@ -55,7 +55,17 @@
           <div class="turn-info"><span id="turn-icon">◎</span><div><h2 id="turn-title">Take your position.</h2><p id="turn-description">A little strategy goes a long way.</p></div></div>
           <div class="clock-block"><div><span class="section-label">YOUR THINKING TIME</span><span id="clock-state">CONNECTING</span></div><div id="clock" class="clock">--<span>:</span>--<small>.0</small></div><div class="clock-track"><div id="clock-progress"></div></div><p>Time runs only on your turn.</p></div>
           <div class="settings">
-            <div class="fixed-depth"><span>AI search depth</span><strong id="depth-name">4 PLY · FIXED</strong></div>
+            <div class="setting-label"><label for="difficulty">AI difficulty</label><span>Next match</span></div>
+            <select id="difficulty" aria-label="AI difficulty">
+              <option value="3" selected>Normal · 3 ply</option>
+              <option value="4">Hard · 4 ply</option>
+            </select>
+            <div class="setting-label"><label for="timer-minutes">Match timer</label><span>Next match</span></div>
+            <select id="timer-minutes" aria-label="Match timer">
+              <option value="1">1 minute</option>
+              <option value="2">2 minutes</option>
+              <option value="3">3 minutes</option>
+            </select>
             <label class="toggle-row" for="pruning"><span>Alpha-Beta pruning<small>Optional search optimization</small></span><input type="checkbox" id="pruning" checked><span class="switch"></span></label>
           </div>
           <button id="start" class="primary">Start a match <span>↗</span></button>
@@ -76,7 +86,7 @@
     <section class="history-section"><div class="history-heading"><span class="section-label">MOVE JOURNAL</span><span id="move-count">NO MOVES YET</span></div><div id="history"><span class="history-empty">Every good game starts with a possibility.</span></div></section>
   </main>
   <footer><span>LIFER’S STRATEGY ARENA <span class="footer-muted">/ An experiment in thinking ahead.</span></span><span>POWERED BY PYTHON · BUILT FOR CURIOSITY</span></footer>
-  <dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close instructions">×</button><div class="eyebrow">A MINUTE TO LEARN</div><h2>Find your alignment.</h2><p>You and Lifer each control three pieces. Be the first to make a straight line through the center.</p><ol><li><strong>Move one piece each turn.</strong> Follow a ring connection or a spoke to an empty neighboring point. No jumping or capturing.</li><li><strong>Only four lines win.</strong> Any two opposite outer points plus the center. Three pieces around the edge do not count.</li><li><strong>Make every second count.</strong> You have <span id="help-time-limit">--</span> seconds across all your turns. Your clock pauses during AI turns; zero means an AI win.</li><li><strong>One opening, equal opportunity.</strong> Every match starts from the same balanced position, with you moving first. Neither side starts with a win or a one-move win.</li></ol><p class="dialog-note">No legal moves means a draw. Repeated positions are allowed. The AI targets four ply with a computation budget. Pruning can be switched between matches. Sound is on by default and can be muted in the header.</p><button id="got-it" class="primary">Got it. Let's play. <span>↗</span></button></dialog>
-  <dialog id="restart-dialog"><div class="eyebrow">START FRESH</div><h2>A new possibility?</h2><p>This ends your current match and resets the same starting position. Your clock keeps running until you restart.</p><div class="dialog-actions"><button id="cancel-restart" class="secondary">Keep playing</button><button id="confirm-restart" class="primary">New match ↗</button></div></dialog>
+  <dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close instructions">×</button><div class="eyebrow">A MINUTE TO LEARN</div><h2>Find your alignment.</h2><p>You and Lifer each control three pieces. Be the first to make a straight line through the center.</p><ol><li><strong>Move one piece each turn.</strong> Follow a ring connection or a spoke to an empty neighboring point. No jumping or capturing.</li><li><strong>Only four lines win.</strong> Any two opposite outer points plus the center. Three pieces around the edge do not count.</li><li><strong>Make every second count.</strong> You have <span id="help-time-limit">--</span> seconds across all your turns. Your clock pauses during AI turns; zero means an AI win.</li><li><strong>One opening, equal opportunity.</strong> Every match starts from the same balanced position, with you moving first. Neither side starts with a win or a one-move win.</li></ol><p class="dialog-note">No legal moves means a draw. Repeated positions are allowed. Choose Normal (3 ply) or Hard (4 ply) before starting. Pruning can be switched between matches. Sound is on by default and can be muted in the header.</p><button id="got-it" class="primary">Got it. Let's play. <span>↗</span></button></dialog>
+  <dialog id="restart-dialog"><div class="eyebrow">START FRESH</div><h2>A new possibility?</h2><p>This ends your current match. Confirm to start a fresh match using the selected timer.</p><div class="dialog-actions"><button id="cancel-restart" class="secondary">Keep playing</button><button id="confirm-restart" class="primary">New match ↗</button></div></dialog>
 </body>
 </html>

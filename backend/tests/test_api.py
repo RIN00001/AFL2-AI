@@ -112,6 +112,11 @@ class APITests(unittest.TestCase):
             self.assertIn(b"Lifer's Strategy Arena", html)
             self.assertIn(b'href="/css/style.css"', html)
             self.assertIn(b'type="module" src="/js/game.js"', html)
+            self.assertIn(b'id="timer-minutes"', html)
+            self.assertIn(b'<option value="3">3 minutes</option>', html)
+            self.assertIn(b'id="difficulty"', html)
+            self.assertIn(b'<option value="3" selected>Normal \xc2\xb7 3 ply</option>', html)
+            self.assertIn(b'<option value="4">Hard \xc2\xb7 4 ply</option>', html)
         for path in ("/css/style.css", "/js/game.js", "/js/renderer.js", "/js/api.js", "/js/audio.js"):
             with self.subTest(path=path), self.client.open(self.url + path) as response:
                 self.assertEqual(response.status, 200)
@@ -124,15 +129,46 @@ class APITests(unittest.TestCase):
         _, preview = self.request('/api/state')
         self.assertEqual(preview['board'], list(FIXED_OPENING))
         self.assertEqual(preview['time_limit'], THINKING_TIME)
+        self.assertEqual(preview['depth'], 3)
         for pruning in (False, True):
             code, state = self.request('/api/new', {'pruning': pruning})
             self.assertEqual(code, 200)
-            self.assertEqual(state['depth'], 4)
+            self.assertEqual(state['depth'], 3)
             self.assertEqual(state['pruning'], pruning)
             self.assertEqual(state['board'], list(FIXED_OPENING))
             self.assertEqual(state['turn'], 1)
             self.assertGreater(state['remaining'], THINKING_TIME - 1)
-        self.assertEqual(self.request('/api/new', {'depth': 3})[0], 400)
+        self.assertEqual(self.request('/api/new', {'depth': 2})[0], 400)
+
+    def test_difficulty_levels_configure_search_depth(self):
+        for depth in (3, 4):
+            with self.subTest(depth=depth):
+                code, state = self.request('/api/new', {'depth': depth})
+                self.assertEqual(code, 200)
+                self.assertEqual(state['depth'], depth)
+                source, target = state['legal_moves'][0]
+                _, state = self.request(
+                    '/api/move', {'from': source, 'to': target, 'ply': state['ply']})
+                _, state = self.request('/api/ai', {'ply': state['ply']})
+                self.assertEqual(state['stats']['target_depth'], depth)
+
+        for invalid in (2, 5, True, 3.5, "3"):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(self.request('/api/new', {'depth': invalid})[0], 400)
+
+    def test_match_timer_choices(self):
+        for minutes in (1, 2, 3):
+            with self.subTest(minutes=minutes):
+                code, state = self.request(
+                    '/api/new', {'timer_minutes': minutes})
+                self.assertEqual(code, 200)
+                self.assertEqual(state['time_limit'], minutes * 60)
+                self.assertGreater(state['remaining'], minutes * 60 - 1)
+
+        for invalid in (0, 4, True, 1.5, "2"):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(
+                    self.request('/api/new', {'timer_minutes': invalid})[0], 400)
 
     def test_ai_transition_has_bounded_grace_and_rejects_early_moves(self):
         _, state = self.request('/api/new', {})

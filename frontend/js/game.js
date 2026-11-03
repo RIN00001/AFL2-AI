@@ -46,7 +46,19 @@ async function newMatch() {
   $('result').hidden = true; error(''); render();
   try {
     await audio.unlock();
-    await accept(await api('new', {pruning: $('pruning').checked}));
+    const timerMinutes = Number($('timer-minutes').value);
+    const depth = Number($('difficulty').value);
+    const match = await api('new', {
+      pruning: $('pruning').checked,
+      timer_minutes: timerMinutes,
+      depth
+    });
+    await accept(match);
+    if (match.time_limit !== timerMinutes * 60) {
+      error(`Server started a ${match.time_limit / 60}-minute match instead of ${timerMinutes}. Restart the Python server, then start a new match again.`);
+    } else if (match.depth !== depth) {
+      error(`Server started the ${match.depth}-ply difficulty instead of ${depth} ply. Restart the Python server, then start a new match again.`);
+    }
     audio.play('start');
   } catch (e) { error(e.message + ' Check the Python server and try again.'); }
   finally { busy = false; render(); }
@@ -84,6 +96,7 @@ $('play-again').addEventListener('click', newMatch);
 $('view-board').addEventListener('click', () => { $('result').hidden = true; });
 $('help').addEventListener('click', () => $('help-dialog').showModal());
 ['close-help', 'got-it'].forEach(id => $(id).addEventListener('click', () => $('help-dialog').close()));
+$('timer-minutes').addEventListener('change', render);
 $('pruning').addEventListener('change', render);
 $('insight-toggle').addEventListener('click', () => {
   const hidden = !$('insight-body').hidden;

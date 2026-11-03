@@ -13,7 +13,10 @@ from backend.ai.minimax import choose_move
 from backend.ai.difficulty import DEFAULT_DEPTH, DEFAULT_PRUNING, SEARCH_DEPTHS
 from backend.game.board import AI, HUMAN, moved
 from backend.game.rules import legal_moves, new_board, winning_line
-from backend.game.settings import GAME_NAME, THINKING_TIME, AI_MIN_THINK_SECONDS, MOVE_ANIMATION_SECONDS
+from backend.game.settings import (
+    GAME_NAME, THINKING_TIME, TIME_LIMIT_MINUTES, DEFAULT_TIME_LIMIT_MINUTES,
+    AI_MIN_THINK_SECONDS, MOVE_ANIMATION_SECONDS,
+)
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 MATCHES = {}
@@ -35,6 +38,7 @@ class Match:
     stats: dict | None = None
     depth: int = DEFAULT_DEPTH
     pruning: bool = DEFAULT_PRUNING
+    time_limit: float = THINKING_TIME
     touched: float = field(default_factory=monotonic)
     lock: Lock = field(default_factory=Lock)
 
@@ -76,7 +80,7 @@ class Match:
                 "legal_moves": legal_moves(self.board, self.turn) if self.status == "playing" else [],
                 "ply": self.ply, "history": self.history[-30:], "stats": self.stats,
                 "depth": self.depth, "pruning": self.pruning,
-                "time_limit": THINKING_TIME,
+                "time_limit": self.time_limit,
                 "clock_starts_in": max(0, self.started - monotonic()) if self.started is not None else 0,
                 "animation_seconds": MOVE_ANIMATION_SECONDS}
 
@@ -138,9 +142,14 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/new":
             depth = data.get("depth", DEFAULT_DEPTH)
             pruning = data.get("pruning", DEFAULT_PRUNING)
-            if type(depth) is not int or depth not in SEARCH_DEPTHS or type(pruning) is not bool:
-                return self.reply(400, {"error": "Invalid AI settings."})
-            match = Match(depth=depth, pruning=pruning)
+            timer_minutes = data.get("timer_minutes", DEFAULT_TIME_LIMIT_MINUTES)
+            if (type(depth) is not int or depth not in SEARCH_DEPTHS
+                    or type(pruning) is not bool or type(timer_minutes) is not int
+                    or timer_minutes not in TIME_LIMIT_MINUTES):
+                return self.reply(400, {"error": "Invalid match settings."})
+            time_limit = timer_minutes * 60
+            match = Match(depth=depth, pruning=pruning,
+                          remaining=time_limit, time_limit=time_limit)
             sid = secrets.token_urlsafe(24)
             with MATCHES_LOCK:
                 old = self.session_id()

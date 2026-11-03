@@ -1,6 +1,8 @@
 """Shared match settings; the server sends these values to the browser."""
 
 GAME_NAME = "Lifer's Strategy Arena"
-THINKING_TIME = 60.0  # Total player thinking time in seconds.
+TIME_LIMIT_MINUTES = (1, 2, 3)
+DEFAULT_TIME_LIMIT_MINUTES = TIME_LIMIT_MINUTES[0]
+THINKING_TIME = DEFAULT_TIME_LIMIT_MINUTES * 60.0
 AI_MIN_THINK_SECONDS = 0.65
 MOVE_ANIMATION_SECONDS = 0.42

@@ -91,15 +91,16 @@ behind HTTPS for internet use.
 - Select your piece, then a highlighted adjacent empty position.
 - Outer positions connect to their two ring neighbors and the center.
 - Win with two opposite outer points plus the center. Edge arcs do not win.
-- Your 60-second clock runs only during your turns. Timeout is an AI win.
+- Choose a 1-, 2-, or 3-minute clock before starting. Your clock runs only
+  during your turns; timeout is an AI win.
 - Every participant gets the same verified fixed opening and moves first.
   Neither side starts with a win or a legal one-move win.
 - No available moves is a draw. Repetition does not end a match.
 - Restart, instructions, legal-move highlights, result display, move history,
   and AI search statistics are included.
-- The search target is fixed at four ply. Pruning can be toggled between
-  matches for algorithm comparison. Reloading reconnects to the existing
-  match; it does not reset the clock.
+- Choose Normal (3 ply, the default) or Hard (4 ply) before starting.
+  Pruning can be toggled between matches for algorithm comparison. Reloading
+  reconnects to the existing match; it does not reset the clock.
 - Sound starts enabled after the first interaction; use the header mute
   button to save your preference. Original tones are synthesized locally.
 - Pieces slide between nodes with subtle landing effects. Reduced-motion
@@ -115,7 +116,8 @@ after one hour; the in-memory session pool is capped at 1,000.
 
 `backend/ai/minimax.py` implements Minimax and optional Alpha-Beta pruning in Python.
 Both use the same move ordering, terminal scores, and evaluation function.
-The fixed target of four ply searches individual moves, not full rounds.
+Search depth counts individual moves, not full rounds. Normal searches to
+three ply; Hard searches to four ply.
 
 The search uses iterative deepening and a 5-second computation budget.
 Only fully completed depths replace the chosen decision. At the same completed

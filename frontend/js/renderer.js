@@ -20,7 +20,11 @@ export function createRenderer(onSelect) {
   });
   const positionName = i => i === 8 ? "Center" : String(i + 1).padStart(2, "0");
   function render(state, selected, busy, syncedAt) {
-    if (state.time_limit !== undefined) $("help-time-limit").textContent = state.time_limit;
+    if (state.time_limit !== undefined) {
+      $("help-time-limit").textContent = state.status === "playing"
+        ? state.time_limit
+        : Number($("timer-minutes").value) * 60;
+    }
     const active = state.status === "playing", humanTurn = active && state.turn === 1;
     const available = (state.legal_moves || []).filter(m => m[0] === selected).map(m => m[1]);
     const last = state.history?.at(-1);
@@ -50,8 +54,9 @@ export function createRenderer(onSelect) {
     $("start").innerHTML = `${state.status === "idle" ? "Start a match" : "New match"} <span>↗</span>`;
     $("start").disabled = busy;
     $("play-again").disabled = busy;
+    $("timer-minutes").disabled = false;
+    $("difficulty").disabled = false;
     $("pruning").disabled = active || busy;
-    $("depth-name").textContent = state.depth ? `${state.depth} PLY · FIXED` : "—";
     $("start-note").textContent = active ? "Ivory is yours. Make a line through the center." : "Same opening. You move first. Make it count.";
     $("move-count").textContent = state.ply ? `${state.ply} ${state.ply === 1 ? "MOVE" : "MOVES"} PLAYED` : "NO MOVES YET";
     $("history").innerHTML = state.history?.length ? state.history.map(m => `<span class="move-chip ${m.player === 2 ? "ai" : ""}"><small>${String(m.number).padStart(2,"0")}</small>${m.player === 1 ? "YOU" : "AI"} <b>${positionName(m.from)} → ${positionName(m.to)}</b></span>`).join("") : '<span class="history-empty">Every good game starts with a possibility.</span>';
@@ -79,16 +84,19 @@ export function createRenderer(onSelect) {
   }
   function updateClock(state, syncedAt) {
     if (state.remaining === undefined) return Infinity;
-    let time = state.remaining;
+    const timeLimit = state.status === "idle"
+      ? Number($("timer-minutes").value) * 60
+      : state.time_limit;
+    let time = state.status === "idle" ? timeLimit : state.remaining;
     const elapsed = (performance.now() - syncedAt) / 1000;
     const grace = state.clock_starts_in || 0;
     if (state.status === "playing" && state.turn === 1) time -= Math.max(0, elapsed - grace);
     time = Math.max(0, time);
     const whole = Math.floor(time);
-    $("clock-state").textContent = state.status === "idle" ? `${state.time_limit} SECONDS TOTAL` : state.status !== "playing" ? "FINISHED" : state.turn !== 1 ? "PAUSED · AI TURN" : elapsed < grace ? "PAUSED · MOVING" : "RUNNING";
+    $("clock-state").textContent = state.status === "idle" ? `${timeLimit} SECONDS TOTAL` : state.status !== "playing" ? "FINISHED" : state.turn !== 1 ? "PAUSED · AI TURN" : elapsed < grace ? "PAUSED · MOVING" : "RUNNING";
     $("mobile-clock").textContent = `${String(Math.floor(whole / 60)).padStart(2,"0")}:${String(whole % 60).padStart(2,"0")}`;
     $("clock").innerHTML = `${String(Math.floor(whole / 60)).padStart(2,"0")}<span>:</span>${String(whole % 60).padStart(2,"0")}<small>.${Math.floor(time * 10) % 10}</small>`;
-    $("clock-progress").style.width = `${Math.min(100, time / state.time_limit * 100)}%`;
+    $("clock-progress").style.width = `${Math.min(100, time / timeLimit * 100)}%`;
     document.querySelector(".clock-block").classList.toggle("urgent", time < 10);
     return time;
   }
