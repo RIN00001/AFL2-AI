@@ -1,5 +1,6 @@
 // Board, status, history, result, and timer presentation.
 const $ = id => document.getElementById(id);
+// Screen coordinates follow the backend indices: 0-7 around the ring, then center 8.
 const coords = Array.from({length: 8}, (_, i) => {
   const a = i * Math.PI / 4;
   return [300 + 213 * Math.sin(a), 300 - 213 * Math.cos(a)];
@@ -18,6 +19,7 @@ export function createRenderer(onSelect) {
     $("board").append(button);
     return button;
   });
+  // Labels are for people; requests and board ownership still use zero-based indices.
   const positionName = i => i === 8 ? "Center" : String(i + 1).padStart(2, "0");
   function render(state, selected, busy, syncedAt) {
     if (state.time_limit !== undefined) {
@@ -28,6 +30,7 @@ export function createRenderer(onSelect) {
     const active = state.status === "playing", humanTurn = active && state.turn === 1;
     const available = (state.legal_moves || []).filter(m => m[0] === selected).map(m => m[1]);
     const last = state.history?.at(-1);
+    // Render the board values supplied by Python: 0 empty, 1 human, 2 AI.
     nodes.forEach((node, i) => {
       const owner = state.board[i], legal = available.includes(i);
       node.className = `node ${owner === 1 ? "human" : owner === 2 ? "ai" : "empty"}${selected === i ? " selected" : ""}${legal ? " legal" : ""}${last?.to === i ? " last-move" : ""}${state.winning_line?.includes(i) ? " winner" : ""}`;
@@ -61,6 +64,8 @@ export function createRenderer(onSelect) {
     $("move-count").textContent = state.ply ? `${state.ply} ${state.ply === 1 ? "MOVE" : "MOVES"} PLAYED` : "NO MOVES YET";
     $("history").innerHTML = state.history?.length ? state.history.map(m => `<span class="move-chip ${m.player === 2 ? "ai" : ""}"><small>${String(m.number).padStart(2,"0")}</small>${m.player === 1 ? "YOU" : "AI"} <b>${positionName(m.from)} → ${positionName(m.to)}</b></span>`).join("") : '<span class="history-empty">Every good game starts with a possibility.</span>';
     $("history").scrollLeft = $("history").scrollWidth;
+    // Display Python's search measurements; JavaScript does not calculate these stats.
+    // Completed depth can be lower than the target when the search budget runs out.
     if (state.stats) {
       $("stat-nodes").textContent = state.stats.nodes.toLocaleString();
       $("stat-time").textContent = `${Math.round(state.stats.elapsed_ms)}ms`;
@@ -102,6 +107,7 @@ export function createRenderer(onSelect) {
   }
 
   async function animateMove(previous, next, seconds = .42) {
+    // Visual movement uses the confirmed history entry; it does not change game rules.
     const move = next.history?.at(-1);
     if (!move || previous.board[move.from] !== move.player ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;

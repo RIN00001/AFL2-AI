@@ -5,6 +5,7 @@ import { createAudio } from './audio.js';
 
 const $ = id => document.getElementById(id);
 const audio = createAudio();
+// Local display state is replaced by Python snapshots; Python owns the match rules.
 let state = {status: 'idle', board: Array(9).fill(0), history: []};
 let selected = null, busy = true, syncedAt = performance.now();
 let aiRetryAt = 0, polling = false, warned = false;
@@ -19,6 +20,7 @@ function updateClock() {
 }
 function error(message) { $('error').textContent = message; $('error').hidden = !message; }
 async function accept(data, animate = false) {
+  // Response flow: keep the old board for animation, then render the server's new state.
   const previous = state;
   state = data;
   syncedAt = performance.now();
@@ -66,12 +68,16 @@ async function newMatch() {
 }
 async function selectNode(i) {
   if (busy || polling || state.status !== 'playing' || state.turn !== 1) return;
+  // First click selects your piece; it does not move anything yet.
   if (state.board[i] === 1) {
     selected = selected === i ? null : i;
     audio.play('select'); render(); return;
   }
+  // Second click must match a legal (source, target) pair supplied by Python.
   if (!(state.legal_moves || []).some(m => m[0] === selected && m[1] === i)) return;
   busy = true; error(''); render();
+  // Example opening action: screen 01 -> Center sends {from: 0, to: 8, ply: 0}.
+  // accept() waits for the server's validated result before updating the board.
   try { await accept(await api('move', {from: selected, to: i, ply: state.ply}), true); }
   catch (e) { error(e.message); }
   finally { busy = false; render(); }
@@ -81,6 +87,7 @@ async function aiTurn() {
   if (busy || polling || state.status !== 'playing' || state.turn !== 2 || Date.now() < aiRetryAt) return;
   busy = true; render();
   try {
+    // Python chooses the AI move; its response uses the same accept/render flow.
     await accept(await api('ai', {ply: state.ply}), true);
     error('');
   } catch (e) {

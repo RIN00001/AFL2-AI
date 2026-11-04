@@ -26,6 +26,8 @@ SESSION_TTL = 3600
 
 @dataclass
 class Match:
+    # Current match state: board + turn are the core positional search state.
+    # Timer, outcome, and history describe the running match around that search.
     board: tuple = field(default_factory=new_board)
     turn: int = HUMAN
     remaining: float = THINKING_TIME
@@ -33,6 +35,7 @@ class Match:
     status: str = "playing"
     reason: str | None = None
     line: tuple | None = None
+    # Actual moves since the match began; search has its own root-relative ply.
     ply: int = 0
     history: list = field(default_factory=list)
     stats: dict | None = None
@@ -47,6 +50,7 @@ class Match:
             self.started = monotonic()
 
     def tick(self):
+        # Python decides timeouts; the browser only estimates the displayed countdown.
         now = monotonic()
         self.touched = now
         if self.status == "playing" and self.turn == HUMAN and self.started is not None:
@@ -56,11 +60,14 @@ class Match:
                 self.status, self.reason, self.started = "ai_win", "timeout", None
 
     def apply(self, move, *, presentation_delay=0.0):
+        # Commit an accepted human or AI action to the real match.
+        # AI search uses moved() on simulated boards without calling this method.
         player = self.turn
         self.board = moved(self.board, move)
         self.ply += 1
         self.history.append({"player": player, "from": move[0], "to": move[1],
                              "number": self.ply})
+        # Goal test after the transition; otherwise pass the turn or declare a draw.
         self.line = winning_line(self.board, player)
         self.started = None
         if self.line:
@@ -74,6 +81,7 @@ class Match:
                 self.started = monotonic() + presentation_delay
 
     def snapshot(self):
+        # Response state for JavaScript: board, legal actions, outcome, and AI metrics.
         self.tick()
         return {"board": self.board, "turn": self.turn, "remaining": self.remaining,
                 "status": self.status, "reason": self.reason, "winning_line": self.line,
@@ -90,6 +98,7 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(FRONTEND), **kwargs)
 
     def reply(self, status, data, cookie=None):
+        # Serialize Python data as JSON; tuples such as the board become JSON arrays.
         body = json.dumps(data).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -140,6 +149,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self.reply(400, {"error": "Invalid request."})
         path = urlsplit(self.path).path
         if path == "/api/new":
+            # Browser choices become per-match settings after server validation.
             depth = data.get("depth", DEFAULT_DEPTH)
             pruning = data.get("pruning", DEFAULT_PRUNING)
             timer_minutes = data.get("timer_minutes", DEFAULT_TIME_LIMIT_MINUTES)
@@ -172,11 +182,14 @@ class Handler(SimpleHTTPRequestHandler):
             match.tick()
             if match.status != "playing":
                 return self.reply(200, match.snapshot())
+            # The client's move count must match, preventing stale/duplicate actions.
             if data.get("ply") != match.ply:
                 return self.reply(409, {"error": "The board changed. Please try again."})
             if path == "/api/move":
                 if match.started is not None and match.started > monotonic():
                     return self.reply(409, {"error": "Please wait for the move animation to finish."})
+                # Human request: validate ownership/adjacency/emptiness on the server
+                # even though JavaScript already highlights legal destinations.
                 move = (data.get("from"), data.get("to"))
                 if (match.turn != HUMAN or any(type(i) is not int for i in move)
                         or move not in legal_moves(match.board, HUMAN)):
@@ -186,12 +199,14 @@ class Handler(SimpleHTTPRequestHandler):
                 if match.turn != AI:
                     return self.reply(409, {"error": "It is your turn."})
                 thinking_started = monotonic()
+                # AI request: choose an action and capture the search statistics.
                 move, match.stats = choose_move(match.board, match.depth, match.pruning)
                 # Presentation delay is separate from the measured algorithm time.
                 sleep(max(0, AI_MIN_THINK_SECONDS - (monotonic() - thinking_started)))
                 if move is None:
                     match.status, match.reason = "draw", "no_moves"
                 else:
+                    # Same match-update method as a human move, then the same JSON reply.
                     match.apply(move, presentation_delay=MOVE_ANIMATION_SECONDS)
             return self.reply(200, match.snapshot())
 
